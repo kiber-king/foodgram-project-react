@@ -1,11 +1,9 @@
 from django.db.models import F, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.utils import timezone as tz
 from django.template.loader import render_to_string
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from reportlab.pdfgen import canvas
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
@@ -202,7 +200,7 @@ class RecipeViewSet(ModelViewSet):
         ).annotate(amount=Sum('amount')).values_list(
             'ingredient__name', 'amount', 'ingredient__measurement_unit')
         html_template = render_to_string('cart/shop_list.html',
-                                        {'ingredients': ingredients})
+                                         {'ingredients': ingredients})
         html = HTML(string=html_template)
         result = html.write_pdf()
         response = HttpResponse(result, content_type='application/pdf;')
