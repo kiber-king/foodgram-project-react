@@ -206,19 +206,8 @@ class RecipeViewSet(ModelViewSet):
             self.request.user, ingredients, shopping_list_date
         )
 
-        response = HttpResponse(content_type='application/pdf')
+        response = HttpResponse(cart_text, content_type='text/plain')
         response['Content-Disposition'] = (
-            'attachment; filename="Foodgram_shopping_cart.pdf"'
+            'attachment; filename="Foodgram_Shopping_cart.txt"'
         )
-
-        p = canvas.Canvas(response)
-        p.setFont("Courier-Bold", 12)
-        text_lines = cart_text.split('\n')
-        y = 750
-        for line in text_lines:
-            p.drawString(50, y, line)
-            y -= 20
-        p.showPage()
-        p.save()
-
         return response
