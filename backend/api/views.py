@@ -1,7 +1,8 @@
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as tz
+from django.template.loader import render_to_string
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
@@ -10,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from weasyprint import HTML
 
 from recipes.models import (Cart, FavoriteRecipe, Ingredient, Recipe,
                             RecipeIngredientAmount, Tag)
@@ -194,20 +196,16 @@ class RecipeViewSet(ModelViewSet):
         self.queryset = Cart.objects.all().order_by('-id',)
         self.pagination_class = CartPagination
         ingredients = RecipeIngredientAmount.objects.filter(
-            recipe__shopping_cart__user=self.request.user
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(
-            in_shopping_cart_ingredient_amount=Sum('amount')
-        ).order_by('ingredient__name')
-        shopping_list_date = tz.now()
-        cart_text = self.cart_text(
-            self.request.user, ingredients, shopping_list_date
-        )
-
-        response = HttpResponse(cart_text, content_type='text/plain')
-        response['Content-Disposition'] = (
-            'attachment; filename="Foodgram_Shopping_cart.txt"'
-        )
+            recipe__shopping_cart__user=self.request.user).values(
+            name=F('ingredient__name'),
+            measurement_unit=F('ingredient__measurement_unit')
+        ).annotate(amount=Sum('amount')).values_list(
+            'ingredient__name', 'amount', 'ingredient__measurement_unit')
+        html_template = render_to_string('cart/shop_list.html',
+                                        {'ingredients': ingredients})
+        html = HTML(string=html_template)
+        result = html.write_pdf()
+        response = HttpResponse(result, content_type='application/pdf;')
+        response['Content-Disposition'] = 'inline; filename=shopping_list.pdf'
+        response['Content-Transfer-Encoding'] = 'binary'
         return response
