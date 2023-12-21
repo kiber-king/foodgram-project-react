@@ -15,7 +15,7 @@ from core.constants import (MAX_AMOUNT, MAX_COOKING_TIME, MIN_AMOUNT,
                             MIN_COOKING_TIME)
 
 
-class CustomUserCreateSerializer(UserCreateSerializer):
+class RegistrationUserCreateSerializer(UserCreateSerializer):
     """ Переопределенный Сериализотор создания пользователя Djoser."""
 
     class Meta:
@@ -29,7 +29,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
         )
 
 
-class CustomUserSerializer(UserSerializer):
+class SubscribeUserSerializer(UserSerializer):
     """Переопределенный Сериализотор пользователя Djoser."""
 
     is_subscribed = SerializerMethodField()
@@ -43,10 +43,10 @@ class CustomUserSerializer(UserSerializer):
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
         return not (user.is_anonymous or not user.subscriber_user.filter(
-                    author=obj).exists())
+            author=obj).exists())
 
 
-class SubscriptionSerializer(CustomUserSerializer):
+class SubscriptionSerializer(SubscribeUserSerializer):
     """Сериализатор подписки."""
 
     recipes = SerializerMethodField()
@@ -152,7 +152,7 @@ class RecipeIngredientAmountSerializer(ModelSerializer):
 class RecipeReadSerializer(ModelSerializer):
     """Сериализатор для просмотра полного рецепта."""
 
-    author = CustomUserSerializer(read_only=True)
+    author = SubscribeUserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     is_favorited = SerializerMethodField()
     is_in_shopping_cart = SerializerMethodField()
@@ -198,6 +198,15 @@ class RecipeReadSerializer(ModelSerializer):
         )
 
 
+def empty_field(field, value):
+    if field := value:
+        return field
+    else:
+        raise ValidationError({
+            "{field}": "Выберите что-нибудь!"
+        })
+
+
 class WriteRecipeSerializer(ModelSerializer):
     """Сериализатор для создания рецепта."""
 
@@ -207,19 +216,11 @@ class WriteRecipeSerializer(ModelSerializer):
         many=True,
     )
     image = Base64ImageField()
-    author = CustomUserSerializer(read_only=True)
+    author = SubscribeUserSerializer(read_only=True)
     cooking_time = IntegerField(
         min_value=MIN_COOKING_TIME,
         max_value=MAX_COOKING_TIME
     )
-
-    def empty_field(self, field, value):
-        if field := value:
-            return field
-        else:
-            raise ValidationError({
-                "{field}": "Выберите что-нибудь!"
-            })
 
     class Meta:
         model = Recipe
@@ -234,13 +235,6 @@ class WriteRecipeSerializer(ModelSerializer):
         )
 
     def validate_ingredients(self, value):
-        def empty_field(field, value):
-            if field := value:
-                return field
-            else:
-                raise ValidationError({
-                    "{field}": "Выберите что-нибудь!"
-                })
 
         ingredients = empty_field('ingredients', value)
         if not ingredients:
@@ -257,7 +251,7 @@ class WriteRecipeSerializer(ModelSerializer):
         return value
 
     def validate_tags(self, value):
-        tags = self.empty_field(
+        tags = empty_field(
             field='tags', value=value
         )
         if not tags:
