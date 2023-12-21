@@ -237,4 +237,3 @@ class RecipeViewSet(ModelViewSet):
         response['Content-Disposition'] = 'inline; filename=shopping_list.pdf'
         response['Content-Transfer-Encoding'] = 'binary'
         return response
-
