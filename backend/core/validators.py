@@ -65,11 +65,11 @@ class LatinCharRegexValidator(RegexValidator):
 
 def validate_username(value):
     if value.lower() == 'me':
-        raise ValidationError("username не может быть 'me'")
+        raise ValidationError('username не может быть "me"')
     return value
 
 
 def validate_recipe_name(value):
     if any(char.isdigit() for char in value):
-        raise ValidationError("Название рецепта не должно содержать цифр")
+        raise ValidationError('Название рецепта не должно содержать цифр')
     return value

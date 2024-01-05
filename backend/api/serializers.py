@@ -10,7 +10,6 @@ from rest_framework.status import HTTP_400_BAD_REQUEST
 
 from recipes.models import Ingredient, Recipe, RecipeIngredientAmount, Tag
 from users.models import User
-
 from core.constants import (MAX_AMOUNT, MAX_COOKING_TIME, MIN_AMOUNT,
                             MIN_COOKING_TIME)
 
@@ -176,15 +175,13 @@ class RecipeReadSerializer(ModelSerializer):
     def get_is_favorited(self, obj):
         user = self.context['request'].user
         if user and not user.is_anonymous:
-            related_manager = getattr(user, 'favorites')
-            return related_manager.filter(recipe=obj).exists()
+            return user.favorites.filter(recipe=obj).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
         if not user.is_anonymous:
-            related_manager = getattr(user, 'shopping_cart')
-            return related_manager.filter(recipe=obj).exists()
+            return user.shopping_cart.filter(recipe=obj).exists()
         return False
 
     def get_ingredients(self, obj):
@@ -201,10 +198,9 @@ class RecipeReadSerializer(ModelSerializer):
 def empty_field(field, value):
     if field := value:
         return field
-    else:
-        raise ValidationError({
-            "{field}": "Выберите что-нибудь!"
-        })
+    raise ValidationError({
+        '{field}': 'Выберите что-нибудь!'
+    })
 
 
 class WriteRecipeSerializer(ModelSerializer):
@@ -239,15 +235,15 @@ class WriteRecipeSerializer(ModelSerializer):
         ingredients = empty_field('ingredients', value)
         if not ingredients:
             raise ValidationError({
-                "ingredients": "Добавьте хотя бы один ингредиент!"
+                'ingredients': 'Добавьте хотя бы один ингредиент!'
             })
-        ingredients_in_recipe = []
+        ingredients_in_recipe = set()
         for ingredient in ingredients:
             if ingredient in ingredients_in_recipe:
                 raise ValidationError({
-                    "ingredients": "Вы уже добавили этот ингредиент!"
+                    'ingredients': 'Вы уже добавили этот ингредиент!'
                 })
-            ingredients_in_recipe.append(ingredient)
+            ingredients_in_recipe.add(ingredient)
         return value
 
     def validate_tags(self, value):
@@ -256,25 +252,18 @@ class WriteRecipeSerializer(ModelSerializer):
         )
         if not tags:
             raise ValidationError({
-                "tags": "Добавьте хотя бы один тег!"
+                'tags': 'Добавьте хотя бы один тег!'
             })
-        tags_in_recipe = []
+        tags_in_recipe = set()
         for tag in tags:
             if tag in tags_in_recipe:
                 raise ValidationError({
-                    "tags": "Этот тег уже выбран!"
+                    'tags': 'Этот тег уже выбран!'
                 })
-            tags_in_recipe.append(tag)
+            tags_in_recipe.add(tag)
         return value
 
-    @transaction.atomic
-    def create(self, validated_data):
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
-
-        recipe = Recipe.objects.create(**validated_data)
-        recipe.tags.set(tags)
-
+    def bulk_create_recipe_ingredient(self, recipe, ingredients):
         RecipeIngredientAmount.objects.bulk_create(
             [RecipeIngredientAmount(
                 recipe=recipe,
@@ -283,6 +272,14 @@ class WriteRecipeSerializer(ModelSerializer):
             ) for ingredient in ingredients]
         )
 
+    @transaction.atomic
+    def create(self, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.set(tags)
+        self.bulk_create_recipe_ingredient(recipe, ingredients)
         return recipe
 
     @transaction.atomic
@@ -293,13 +290,7 @@ class WriteRecipeSerializer(ModelSerializer):
         if 'ingredients' in validated_data:
             RecipeIngredientAmount.objects.filter(recipe=instance).delete()
             ingredients = validated_data.pop('ingredients')
-            RecipeIngredientAmount.objects.bulk_create(
-                [RecipeIngredientAmount(
-                    recipe=instance,
-                    ingredient_id=ingredient['id'],
-                    amount=ingredient['amount']
-                ) for ingredient in ingredients]
-            )
+            self.bulk_create_recipe_ingredient(instance, ingredients)
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):

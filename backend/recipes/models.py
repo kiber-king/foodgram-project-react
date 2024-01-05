@@ -219,6 +219,7 @@ class AbstractUsersRecipe(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ['user', 'recipe']
         constraints = [
             UniqueConstraint(
                 fields=('user', 'recipe'),
@@ -226,7 +227,7 @@ class AbstractUsersRecipe(models.Model):
             )
         ]
 
-    def str(self):
+    def __str__(self):
         return f'{self.user} :: {self.recipe}'
 
 
@@ -243,6 +244,9 @@ class FavoriteRecipe(AbstractUsersRecipe):
         verbose_name_plural = 'Избранные рецепты'
         ordering = ('add_to_favorite_date',)
 
+    def __str__(self):
+        return f'Дата  добавления в избранное: {self.add_to_favorite_date}'
+
 
 class Cart(AbstractUsersRecipe):
     """Модель списка покупок"""
@@ -256,3 +260,6 @@ class Cart(AbstractUsersRecipe):
         verbose_name = 'Рецепт в корзине'
         verbose_name_plural = 'Рецепты в корзине'
         ordering = ('-id',)
+
+    def __str__(self):
+        return f'Дата добавления в корзину: {self.add_to_shopping_cart_date}'

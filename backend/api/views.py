@@ -14,7 +14,6 @@ from weasyprint import HTML
 from recipes.models import (Cart, FavoriteRecipe, Ingredient, Recipe,
                             RecipeIngredientAmount, Tag)
 from users.models import Subscription, User
-
 from core.filters import IngredientFilter, RecipeFilter
 from core.pagination import CartPagination, CustomPagination
 from core.permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
@@ -62,7 +61,7 @@ class SubscriptionUserViewSet(UserViewSet):
     def subscriptions(self, request):
         user = request.user
         subscriptions = User.objects.filter(author_in_subscription__user=user)
-        serializer_context = {"request": request}
+        serializer_context = {'request': request}
         paginated_subscriptions = self.paginate_queryset(subscriptions)
 
         serializer = SubscriptionSerializer(
@@ -116,12 +115,9 @@ class RecipeViewSet(ModelViewSet):
     def favorite_add(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
 
-        if FavoriteRecipe.objects.filter(
-                user=self.request.user,
-                recipe=recipe
-        ).exists():
+        if recipe.favorites.filter(user=self.request.user).exists():
             return Response(
-                {"errors": "Вы уже добавили этот рецепт!"},
+                {'errors': 'Вы уже добавили этот рецепт!'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -138,17 +134,14 @@ class RecipeViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite_remove(self, request, pk):
-        del_favorite = FavoriteRecipe.objects.filter(
-            user=self.request.user,
-            recipe__id=pk
-        )
+        del_favorite = request.user.favorites.filter(recipe__id=pk)
 
         if del_favorite.exists():
             del_favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(
-            {"errors": "Вы уже удалили этот рецепт!"},
+            {'errors': 'Вы уже удалили этот рецепт!'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -158,16 +151,13 @@ class RecipeViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart_add(self, request, pk):
-        self.queryset = Cart.objects.all().order_by('-id', )
+        self.queryset = Cart.objects.all()
         self.pagination_class = CartPagination
         recipe = get_object_or_404(Recipe, id=pk)
 
-        if Cart.objects.filter(
-                user=self.request.user,
-                recipe=recipe
-        ).exists():
+        if request.user.shopping_cart.filter(recipe=recipe).exists():
             return Response(
-                {"errors": "Вы уже добавили этот рецепт!"},
+                {'errors': 'Вы уже добавили этот рецепт!'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -181,13 +171,7 @@ class RecipeViewSet(ModelViewSet):
     @shopping_cart_add.mapping.delete
     def remove_from_cart(self, request, pk):
 
-        del_cart = Cart.objects.filter(
-
-            user=self.request.user,
-
-            recipe__id=pk
-
-        )
+        del_cart = request.user.shopping_cart.filter(recipe__id=pk)
 
         if del_cart.exists():
             del_cart.delete()
@@ -196,7 +180,7 @@ class RecipeViewSet(ModelViewSet):
 
         return Response(
 
-            {"errors": "Вы уже удалили этот рецепт!"},
+            {'errors': 'Вы уже удалили этот рецепт!'},
 
             status=status.HTTP_400_BAD_REQUEST,
 
