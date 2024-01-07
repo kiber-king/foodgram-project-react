@@ -239,11 +239,12 @@ class WriteRecipeSerializer(ModelSerializer):
             })
         ingredients_in_recipe = set()
         for ingredient in ingredients:
-            if ingredient in ingredients_in_recipe:
+            ingredient_tuple = tuple(ingredient.items())
+            if ingredient_tuple in ingredients_in_recipe:
                 raise ValidationError({
                     'ingredients': 'Вы уже добавили этот ингредиент!'
                 })
-            ingredients_in_recipe.add(ingredient)
+            ingredients_in_recipe.add(ingredient_tuple)
         return value
 
     def validate_tags(self, value):
