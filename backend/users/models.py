@@ -21,7 +21,9 @@ class User(AbstractUser):
         help_text='Введите ник пользователя',
         validators=(
             validators.validate_username,
-            validators.LatinCharRegexValidator(),
+            validators.LatinCharRegexValidator(
+                message='Имя пользователя должно'
+                        ' содержать только латиницу и нижние подчеркивания.'),
             validators.TwoCharValidator(constants.MIN_TEXT_LENGHT),
         )
     )
@@ -33,7 +35,7 @@ class User(AbstractUser):
             validators.TwoCharValidator(constants.MIN_TEXT_LENGHT),
             validators.CyrillicCharRegexValidator(
                 message='Имя должно содержать только кириллические '
-                        'символы.', ),
+                        'символы.')
         )
     )
     last_name = models.CharField(
@@ -42,7 +44,9 @@ class User(AbstractUser):
         help_text='Введите свою фамилию',
         validators=(
             validators.TwoCharValidator(constants.MIN_TEXT_LENGHT),
-            validators.CyrillicCharRegexValidator(),
+            validators.CyrillicCharRegexValidator(
+                message='Фамилия должна содержать только кириллические '
+                        'символы.')
         )
     )
     password = models.CharField(
