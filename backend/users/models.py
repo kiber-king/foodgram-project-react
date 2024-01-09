@@ -31,7 +31,9 @@ class User(AbstractUser):
         help_text='Введите свое имя',
         validators=(
             validators.TwoCharValidator(constants.MIN_TEXT_LENGHT),
-            validators.CyrillicCharRegexValidator(),
+            validators.CyrillicCharRegexValidator(
+                message='Имя должно содержать только кириллические '
+                        'символы.', ),
         )
     )
     last_name = models.CharField(
