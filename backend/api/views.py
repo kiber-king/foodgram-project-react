@@ -112,7 +112,7 @@ class RecipeViewSet(ModelViewSet):
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-    def favorite_add(self, request, pk):
+    def favorite(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
 
         if recipe.favorites.filter(user=self.request.user).exists():
@@ -128,11 +128,7 @@ class RecipeViewSet(ModelViewSet):
         serializer = RecipeShortSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(
-        methods=['delete'],
-        detail=True,
-        permission_classes=[IsAuthenticated],
-    )
+    @favorite.mapping.delete
     def favorite_remove(self, request, pk):
         del_favorite = request.user.favorites.filter(recipe__id=pk)
 
@@ -150,7 +146,7 @@ class RecipeViewSet(ModelViewSet):
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-    def shopping_cart_add(self, request, pk):
+    def shopping_cart(self, request, pk):
         self.queryset = Cart.objects.all()
         self.pagination_class = CartPagination
         recipe = get_object_or_404(Recipe, id=pk)
@@ -168,7 +164,7 @@ class RecipeViewSet(ModelViewSet):
         serializer = RecipeShortSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @shopping_cart_add.mapping.delete
+    @shopping_cart.mapping.delete
     def remove_from_cart(self, request, pk):
 
         del_cart = request.user.shopping_cart.filter(recipe__id=pk)
